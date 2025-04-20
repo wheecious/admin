@@ -1,0 +1,46 @@
+---
+- name: postgress in docker with docker-compose
+  hosts: wheecious01
+  become: true
+  tasks:
+
+    - name: set PSQL_DIR
+      set_fact:
+        PSQL_DIR: "/home/{{ ansible_user }}/psql"
+
+    - name: docker-compose
+      apt:
+        name: docker-compose
+        state: present
+
+    - name: copy pg-docker.service
+      copy:
+        src: pg-docker.service
+        dest: /etc/systemd/system/pg-docker.service
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: copy .env
+      copy:
+        src: .env # .env is built in the pipeline
+        dest: "{{ PSQL_DIR }}/.env"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: copy docker-compose.yml
+      copy:
+        src: docker-compose.yml
+        dest: "{{ PSQL_DIR }}/docker-compose.yml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+
+    - name: pg-docker service
+      ansible.builtin.systemd_service:
+        name: pg-docker
+        daemon-reexec: true
+        daemon-reload: true
+        enabled: true
+        state: started
