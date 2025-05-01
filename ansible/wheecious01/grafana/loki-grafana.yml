@@ -1,0 +1,89 @@
+---
+- name: Grafana Loki install
+  hosts: wheecious01
+  become: true
+  tasks:
+
+    - name: set REMOTE_DIR
+      set_fact:
+        REMOTE_DIR: "/home/{{ ansible_user }}/grafana"
+
+    - name: set KUBECONFIG
+      set_fact:
+        KUBECONFIG: "/etc/rancher/k3s/k3s.yaml"
+
+    - name: Ensure working dir exists
+      ansible.builtin.file:
+        path: "{{ REMOTE_DIR }}"
+        state: directory
+        mode: "0755"
+
+    - name: Ensure pip installed
+      become: true
+      ansible.builtin.package:
+        name: python3-pip
+        state: present
+
+    - name: Kubernetes module for Python
+      become: true
+      ansible.builtin.pip:
+        name: kubernetes
+
+    - name: Add Helm repo
+      community.kubernetes.helm_repository:
+        name: grafana
+        repo_url: https://grafana.github.io/helm-charts
+
+    - name: Install Loki stack
+      community.kubernetes.helm:
+        name: loki
+        chart_ref: grafana/loki-stack
+        release_namespace: loki
+        create_namespace: true
+        kubeconfig_path: "{{ KUBECONFIG }}"
+        values:
+          grafana:
+            enabled: false
+          prometheus:
+            enabled: false
+
+    - name: Grafana
+      community.kubernetes.helm:
+        name: grafana
+        chart_ref: grafana/grafana
+        release_namespace: loki
+        create_namespace: true
+        kubeconfig_path: "{{ KUBECONFIG }}"
+        values:
+          adminPassword: "{{ grafana_admin_pass }}"
+          grafana.ini:
+            server:
+              root_url: "https://wheecious.serik.red/grafana"
+
+    - name: move yaml files
+      ansible.builtin.copy:
+        src: files/
+        dest: "{{ REMOTE_DIR }}"
+        mode: "0655"
+
+    - name: Kubectl Grafana Ingress apply
+      ansible.builtin.shell: |
+        kubectl apply -f "{{ REMOTE_DIR }}/grafana-ingress.yaml"
+      args:
+        executable: /bin/bash
+
+    - name: Helm Loki apply values
+      ansible.builtin.shell: |
+        helm upgrade --install loki grafana/loki-stack \
+          --namespace loki --create-namespace \
+          -f "{{ REMOTE_DIR }}/values.yaml" \
+          --kubeconfig "{{ KUBECONFIG }}"
+      args:
+        executable: /bin/bash
+
+    - name: Kubectl persistent volume apply
+      ansible.builtin.shell: |
+        kubectl apply -f "{{ REMOTE_DIR }}/pv-loki.yaml" \
+          --kubeconfig "{{ KUBECONFIG }}"
+      args:
+        executable: /bin/bash

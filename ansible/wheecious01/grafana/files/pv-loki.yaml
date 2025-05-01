@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: loki-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: loki-storage
+  hostPath:
+    path: /var/log/k3s
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-pvc
+  namespace: loki
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: loki-storage
+  resources:
+    requests:
+      storage: 1Gi
