@@ -1,0 +1,39 @@
+FROM python:3.10-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    gettext \
+    libc6 \
+    openssh-client \
+    docker.io \
+    git \
+    bash \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# kubectl
+RUN KUBECTL_VERSION=$(curl -s https://cdn.dl.k8s.io/release/stable.txt) && \
+    curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && \
+    rm kubectl
+
+# Helm
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# linters
+RUN pip install --no-cache-dir \
+    pylint \
+    flake8 \
+    yamllint \
+    bandit
+
+# kubeval
+RUN curl -L https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz | tar xz \
+    && mv kubeval /usr/local/bin/
+
+VOLUME ["/var/run/docker.sock"]
+
+CMD ["bash"]
