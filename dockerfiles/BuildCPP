@@ -1,0 +1,9 @@
+FROM buildpack-deps:24.04
+
+RUN wget -O- https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
+
+RUN echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ noble main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
+
+RUN apt update && apt install -y zlib1g-dev software-properties-common && add-apt-repository universe && apt install -y cmake libx11-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libgl1-mesa-dev libglu1-mesa-dev libfreetype6-dev libogg-dev libvorbis-dev libflac-dev libopenal-dev libudev-dev libjpeg-dev libsndfile1-dev libpthread-stubs0-dev
+
+CMD ["bash"]

@@ -44,3 +44,10 @@
         daemon-reload: true
         enabled: true
         state: started
+      notify: restart pg-docker
+
+  handlers:
+    - name: restart pg-docker
+      ansible.builtin.systemd_service:
+        name: pg-docker
+        state: restarted
